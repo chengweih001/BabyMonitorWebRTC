@@ -4,10 +4,32 @@ const localVideo = document.getElementById('local-video');
 const remoteVideo = document.getElementById('remote-video');
 const playVideoButton = document.getElementById('play-video');
 const connectionStatus = document.getElementById('connection-status');
+const clientCountContainer = document.getElementById('client-count-container');
+const clientCountSpan = document.getElementById('client-count');
 
 let peerConnection;
 let ws;
+let currentMode; // Store the current mode
 let localStream;
+
+// Function to create and send an offer (used initially and on request)
+async function sendOffer() {
+    if (currentMode !== 'host' || !peerConnection || !ws || ws.readyState !== WebSocket.OPEN) {
+        console.log('Cannot send offer: Not in host mode or connection not ready.');
+        return;
+    }
+    try {
+        console.log('Creating offer...');
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        console.log('Sending offer:', offer.sdp);
+        ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+        connectionStatus.textContent = 'Offer sent. Waiting for client(s)...';
+    } catch (error) {
+        console.error('Error creating/sending offer:', error);
+        connectionStatus.textContent = `Error sending offer: ${error.message}`;
+    }
+}
 
 hostButton.addEventListener('click', () => start('host'));
 clientButton.addEventListener('click', () => start('client'));
@@ -21,8 +43,20 @@ playVideoButton.addEventListener('click', () => {
 
 async function start(mode) {
     console.log(`Starting ${mode} mode`);
+    currentMode = mode; // Store the mode
     // ws = new WebSocket('wss://kind-purring-bayberry.glitch.me/');
     ws = new WebSocket('ws://localhost:8080/');
+
+    // Hide mode selection buttons
+    hostButton.style.display = 'none';
+    clientButton.style.display = 'none';
+
+    // Show client count only for host
+    if (mode === 'host') {
+        clientCountContainer.style.display = 'block';
+    } else {
+        clientCountContainer.style.display = 'none';
+    }
 
     ws.onopen = () => {
         console.log('Connected to WebSocket server');
@@ -42,6 +76,20 @@ async function start(mode) {
             connectionStatus.textContent = message.message;
             console.log('System message:', message.message);
             return;
+        }
+
+        // Handle client count updates for the host
+        if (message.type === 'client-update' && currentMode === 'host') {
+            clientCountSpan.textContent = message.count;
+            console.log(`Client count updated: ${message.count}`);
+            return; // Don't update general status for this message type
+        }
+
+        // Handle request from server to send offer (for new clients)
+        if (message.type === 'request-offer' && currentMode === 'host') {
+             console.log(`Received request to send offer for client ID: ${message.clientId}`);
+             await sendOffer(); // Re-send the offer
+             return; 
         }
         
         connectionStatus.textContent = `Received message: ${message.type}`;
@@ -160,7 +208,7 @@ async function start(mode) {
 
     if (mode === 'host') {
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             localVideo.srcObject = localStream;
             localStream.getTracks().forEach(track => {
                 console.log('Adding track to peer connection:', track);
@@ -169,10 +217,9 @@ async function start(mode) {
             
             connectionStatus.textContent = 'Host Mode: Waiting for client to connect';
             
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            console.log('Offer:', offer.sdp);
-            ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+            // Send the initial offer
+            await sendOffer(); 
+
         } catch (error) {
             console.error('Error starting host mode:', error);
             connectionStatus.textContent = `Error: ${error.message}`;
