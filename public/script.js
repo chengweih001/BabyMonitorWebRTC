@@ -10,7 +10,7 @@ clientButton.addEventListener('click', () => start('client'));
 
 async function start(mode) {
     console.log(`Starting ${mode} mode`);
-    ws = new WebSocket('ws://localhost:8080');
+    ws = new WebSocket('wss://kind-purring-bayberry.glitch.me/');
 
     ws.onopen = () => {
         console.log('Connected to WebSocket server');
