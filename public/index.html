@@ -2,6 +2,23 @@
 <html>
 <head>
     <title>Baby Monitor</title>
+    <style>
+        #video-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+        #connection-status {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <h1>Baby Monitor</h1>
@@ -9,8 +26,11 @@
         <button id="host-button">Host</button>
         <button id="client-button">Client</button>
     </div>
+    <div id="connection-status">Not connected</div>
     <div id="video-container">
+        <video id="local-video" autoplay playsinline muted></video>
         <video id="remote-video" autoplay playsinline></video>
+        <button id="play-video" style="display: none;">Play Video</button>
     </div>
     <script src="script.js"></script>
 </body>
