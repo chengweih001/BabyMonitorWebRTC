@@ -21,7 +21,8 @@ playVideoButton.addEventListener('click', () => {
 
 async function start(mode) {
     console.log(`Starting ${mode} mode`);
-    ws = new WebSocket('wss://kind-purring-bayberry.glitch.me/');
+    // ws = new WebSocket('wss://kind-purring-bayberry.glitch.me/');
+    ws = new WebSocket('ws://localhost:8080/');
 
     ws.onopen = () => {
         console.log('Connected to WebSocket server');
