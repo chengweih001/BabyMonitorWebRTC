@@ -6,6 +6,7 @@ const playVideoButton = document.getElementById('play-video');
 const connectionStatus = document.getElementById('connection-status');
 const clientCountContainer = document.getElementById('client-count-container');
 const clientCountSpan = document.getElementById('client-count');
+const muteButton = document.getElementById('mute-button');
 
 let peerConnection;
 let ws;
@@ -38,6 +39,14 @@ playVideoButton.addEventListener('click', () => {
         remoteVideo.play().catch(error => {
             console.error('Error playing remote video:', error);
         });
+    }
+});
+
+muteButton.addEventListener('click', () => {
+    if (remoteVideo) {
+        remoteVideo.muted = !remoteVideo.muted;
+        muteButton.textContent = remoteVideo.muted ? 'Unmute Audio' : 'Mute Audio';
+        console.log(`Remote video audio ${remoteVideo.muted ? 'muted' : 'unmuted'}`);
     }
 });
 
@@ -168,11 +177,20 @@ async function start(mode) {
             remoteVideo.srcObject = event.streams[0];
             
             // Show the play button
-            playVideoButton.style.display = 'block';
+            playVideoButton.style.display = 'inline-block'; // Use inline-block for side-by-side
             playVideoButton.style.padding = '10px';
             playVideoButton.style.fontSize = '16px';
-            playVideoButton.style.margin = '10px auto';
-            playVideoButton.style.display = 'block';
+            playVideoButton.style.margin = '10px 5px'; // Adjust margin
+
+            // Show the mute button only for clients
+            if (currentMode === 'client') {
+                muteButton.style.display = 'inline-block'; // Use inline-block
+                muteButton.style.padding = '10px';
+                muteButton.style.fontSize = '16px';
+                muteButton.style.margin = '10px 5px'; // Adjust margin
+                // Set initial state based on video element's default (usually not muted)
+                muteButton.textContent = remoteVideo.muted ? 'Unmute Audio' : 'Mute Audio';
+            }
             
             connectionStatus.textContent = 'Stream received! Click Play if video does not start automatically.';
             
@@ -282,12 +300,13 @@ async function start(mode) {
                 }
             });
             
-            // Add multiple transceivers to ensure we can receive video
+            // Add transceivers to receive video and audio
             try {
                 peerConnection.addTransceiver('video', { direction: 'recvonly' });
-                console.log('Added video transceiver');
+                peerConnection.addTransceiver('audio', { direction: 'recvonly' });
+                console.log('Added video and audio transceivers');
             } catch (e) {
-                console.error('Error adding video transceiver:', e);
+                console.error('Error adding transceivers:', e);
             }
             
             connectionStatus.textContent = 'Client Mode: Connecting to host';
